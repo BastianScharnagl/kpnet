@@ -1,0 +1,66 @@
+model:
+  class_path: models.kpnet.KPNet
+  init_args: 
+    input_keys: ["human_keypoints_posed", "fashion_keypoints_stock"]
+    output_key: "fashion_keypoints_posed"
+    encoder_layers:
+        - class_path: torch.nn.Linear
+          init_args:
+              in_features: 78
+              out_features: 78
+        - class_path: utils.activation_functions.PeronaMalik
+          init_args:
+              l: 1
+        - class_path: torch.nn.Linear
+          init_args:
+              in_features: 78
+              out_features: 78
+        - class_path: utils.activation_functions.PeronaMalik
+          init_args:
+              l: 1
+    decoder_layers:
+        - class_path: torch.nn.Linear
+          init_args:
+              in_features: 78
+              out_features: 28
+        - class_path: utils.activation_functions.PeronaMalik
+          init_args:
+              l: 1
+    loss_fn: 
+        class_path: torch.nn.MSELoss
+        
+    learning_rate: 1.0e-03
+
+data:
+  class_path: dataset.dresscode.DataModule
+  init_args:
+    data_root: ../datasets/dresscode_trousers
+    image: "human_image"
+    representations: ["human_keypoints_posed", "fashion_keypoints_stock", "fashion_keypoints_posed", "human_image"]
+    batch_size: 512
+    num_workers: 0
+    translate: True
+    pkl_path: "KPNet.pkl"
+    reload: False
+    
+trainer:
+  logger: 
+    class_path: pytorch_lightning.loggers.TensorBoardLogger
+    init_args:
+        save_dir: logs
+        name: KPNet
+        version: v1
+  enable_checkpointing: true
+  callbacks: 
+    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+      init_args:
+        save_top_k: 1
+        monitor: val_loss
+        mode: min
+    - class_path: pytorch_lightning.callbacks.early_stopping.EarlyStopping
+      init_args:
+        monitor: val_loss
+        min_delta: 0.00
+        patience: 50
+        verbose: False
+        mode: min
